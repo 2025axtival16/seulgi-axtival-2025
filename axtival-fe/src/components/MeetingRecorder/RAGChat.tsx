@@ -4,17 +4,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Bot, User, ExternalLink } from "lucide-react";
 import { sprinkles, semanticColors } from "../../styles/sprinkles.css";
 import { API_BASE_URL } from "../../constants/KEY";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css"; // 하이라이트 스타일
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  // sources?: Array<{
-  //   title: string;
-  //   url: string;
-  //   pageId: string;
-  // }>;
+  sources?: Array<{
+    title: string;
+    url: string;
+    pageId: string;
+  }>;
 }
 
 interface RAGChatProps {
@@ -102,9 +106,9 @@ const RAGChat: React.FC<RAGChatProps> = ({ vectorStoreId, isEnabled }) => {
       // // 랜덤 응답 선택
       // const randomResponse =
       //   mockResponses[Math.floor(Math.random() * mockResponses.length)];
-      console.log(userMessage.content);
-      console.log(vectorStoreId);
-      console.log(messages.slice(-5));
+      // console.log(userMessage.content);
+      // console.log(vectorStoreId);
+      // console.log(messages.slice(-5));
 
       const payload = {
         question: userMessage?.content ?? "",
@@ -112,7 +116,7 @@ const RAGChat: React.FC<RAGChatProps> = ({ vectorStoreId, isEnabled }) => {
       };
       console.log("POST /api/rag/chat payload ->", payload);
 
-      const res = await fetch(`${API_BASE_URL}/api/rag/chat`, {
+      const res = await fetch(`/api/rag/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -246,14 +250,179 @@ const RAGChat: React.FC<RAGChatProps> = ({ vectorStoreId, isEnabled }) => {
                     backgroundColor:
                       message.role === "user" ? "#d8dff6" : "#fbdaed",
                     fontSize: "14px",
-                    lineHeight: "1.5",
                     whiteSpace: "pre-wrap",
                     display: "inline-block",
                     maxWidth: "100%",
                     width: "fit-content",
                   }}
                 >
-                  {message.content}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1
+                          style={{
+                            fontSize: "1.2em",
+                            fontWeight: "bold",
+                            margin: "6px 0 4px 0",
+                            color: "inherit",
+                          }}
+                        >
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2
+                          style={{
+                            fontSize: "1.1em",
+                            fontWeight: "bold",
+                            margin: "4px 0 2px 0",
+                            color: "inherit",
+                          }}
+                        >
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3
+                          style={{
+                            fontSize: "1.05em",
+                            fontWeight: "bold",
+                            margin: "2px 0 1px 0",
+                            color: "inherit",
+                          }}
+                        >
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => (
+                        <p
+                          style={{
+                            margin: "1px 0",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {children}
+                        </p>
+                      ),
+                      code: ({
+                        children,
+                        ...props
+                      }: { children: React.ReactNode } & any) =>
+                        props.inline ? (
+                          <code
+                            style={{
+                              backgroundColor: "#f1f5f9",
+                              padding: "1px 3px",
+                              borderRadius: "3px",
+                              fontSize: "0.85em",
+                              fontFamily: "monospace",
+                            }}
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ) : (
+                          <code
+                            style={{
+                              display: "block",
+                              backgroundColor: "#f8fafc",
+                              padding: "8px",
+                              borderRadius: "4px",
+                              fontSize: "0.85em",
+                              fontFamily: "monospace",
+                              overflow: "auto",
+                              border: "1px solid #e2e8f0",
+                              margin: "4px 0",
+                            }}
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ),
+                      blockquote: ({ children }) => (
+                        <blockquote
+                          style={{
+                            borderLeft: "3px solid #6366f1",
+                            paddingLeft: "12px",
+                            margin: "4px 0",
+                            fontStyle: "italic",
+                            color: "#64748b",
+                          }}
+                        >
+                          {children}
+                        </blockquote>
+                      ),
+                      ul: ({ children }) => (
+                        <ul
+                          style={{
+                            paddingLeft: "16px",
+                            margin: "2px 0",
+                          }}
+                        >
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol
+                          style={{
+                            paddingLeft: "16px",
+                            margin: "2px 0",
+                          }}
+                        >
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children }) => (
+                        <li
+                          style={{
+                            margin: "1px 0",
+                            lineHeight: "1.3",
+                          }}
+                        >
+                          {children}
+                        </li>
+                      ),
+                      table: ({ children }) => (
+                        <table
+                          style={{
+                            borderCollapse: "collapse",
+                            width: "100%",
+                            margin: "4px 0",
+                            border: "1px solid #e2e8f0",
+                            fontSize: "0.9em",
+                          }}
+                        >
+                          {children}
+                        </table>
+                      ),
+                      th: ({ children }) => (
+                        <th
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            padding: "6px 8px",
+                            backgroundColor: "#f8fafc",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            padding: "6px 8px",
+                          }}
+                        >
+                          {children}
+                        </td>
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
 
                 {/* 출처 링크 */}
@@ -273,7 +442,7 @@ const RAGChat: React.FC<RAGChatProps> = ({ vectorStoreId, isEnabled }) => {
                     >
                       참고 문서:
                     </div>
-                    {message.sources.map((source, index) => (
+                    {message.sources.map((source: any, index: number) => (
                       <div key={index} style={{ marginBottom: "4px" }}>
                         <a
                           href={source.url}

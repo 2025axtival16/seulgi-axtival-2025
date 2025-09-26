@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Database, Tag, RefreshCw, MessageSquare } from "lucide-react";
+import {
+  Database,
+  Tag,
+  RefreshCw,
+  MessageSquare,
+  ChevronDown,
+  CheckCircle,
+} from "lucide-react";
 import { sprinkles } from "../../styles/sprinkles.css";
 import { API_BASE_URL } from "../../constants/KEY";
 
@@ -32,11 +39,27 @@ const RAGManager: React.FC<RAGManagerProps> = ({
     pageCount: number;
   } | null>(null);
   const [vectorStoreId, setVectorStoreId] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // 사용 가능한 라벨 목록 로드
   useEffect(() => {
     loadAvailableLabels();
   }, []);
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-dropdown="label-selector"]')) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [isDropdownOpen]);
 
   const loadAvailableLabels = async () => {
     try {
@@ -44,7 +67,7 @@ const RAGManager: React.FC<RAGManagerProps> = ({
       const mockLabels: RAGLabel[] = [
         {
           id: "1",
-          name: "AIWA주간회의",
+          name: "UMEET주간회의",
           pageCount: 15,
           lastUpdated: "2024-01-15",
           isActive: true,
@@ -98,7 +121,7 @@ const RAGManager: React.FC<RAGManagerProps> = ({
       // onVectorStoreReady(mockVectorStoreId);
 
       // 실제 API 호출 코드 (주석 처리)
-      const searchResponse = await fetch(`${API_BASE_URL}/api/rag/upload`, {
+      const searchResponse = await fetch(`/api/rag/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -128,25 +151,55 @@ const RAGManager: React.FC<RAGManagerProps> = ({
     }
   };
 
+  const handleLabelSelect = (labelName: string) => {
+    onSelectedLabelChange(labelName);
+    setIsDropdownOpen(false);
+  };
+
+  const selectedLabelData = availableLabels.find(
+    (label) => label.name === selectedLabel
+  );
+
   return (
     <div
       style={{
-        border: "1px solid #e0e0e0",
-        borderRadius: "8px",
-        padding: "16px",
-        marginBottom: "16px",
+        background: "linear-gradient(135deg, #ffffff, #f8fafc)",
+        border: "2px solid #e2e8f0",
+        borderRadius: "16px",
+        padding: "24px",
+        marginBottom: "20px",
+        boxShadow:
+          "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
       }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "8px",
-          marginBottom: "16px",
+          gap: "12px",
+          marginBottom: "24px",
         }}
       >
-        <Database size={20} style={{ color: "#e6007e" }} />
-        <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600" }}>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #6e5dce, #b2b6ef)",
+            borderRadius: "50%",
+            padding: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Database size={20} style={{ color: "white" }} />
+        </div>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "18px",
+            fontWeight: "700",
+            color: "#1e293b",
+          }}
+        >
           참고할 회의록 가져오기
         </h3>
       </div>
@@ -154,41 +207,170 @@ const RAGManager: React.FC<RAGManagerProps> = ({
       <div style={{ marginBottom: "16px" }}>
         <label
           style={{
-            display: "block",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
             fontSize: "14px",
-            fontWeight: "500",
-            marginBottom: "8px",
+            fontWeight: "600",
+            marginBottom: "12px",
+            color: "#374151",
           }}
         >
+          <Tag size={14} style={{ color: "#6e5dce" }} />
           연동할 라벨 선택
         </label>
-        <select
-          value={selectedLabel}
-          onChange={(e) => {
-            const newLabel = e.target.value;
-            onSelectedLabelChange(newLabel);
-          }}
-          disabled={isProcessing}
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            fontSize: "14px",
-            backgroundColor: isProcessing ? "#f5f5f5" : "white",
-          }}
+
+        {/* 커스텀 드롭다운 */}
+        <div
+          style={{ position: "relative", width: "100%" }}
+          data-dropdown="label-selector"
         >
-          <option value="">라벨을 선택하세요</option>
-          {availableLabels.map((label) => (
-            <option key={label.id} value={label.name}>
-              {label.name}
-            </option>
-          ))}
-        </select>
+          <button
+            onClick={() => !isProcessing && setIsDropdownOpen(!isDropdownOpen)}
+            disabled={isProcessing}
+            style={{
+              width: "100%",
+              padding: "16px",
+              border: `2px solid ${selectedLabel ? "#6e5dce" : "#e2e8f0"}`,
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontWeight: "500",
+              backgroundColor: isProcessing ? "#f1f5f9" : "white",
+              cursor: isProcessing ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "all 0.3s ease",
+              boxShadow: selectedLabel
+                ? "0 2px 8px rgba(110, 93, 206, 0.2)"
+                : "0 1px 3px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {selectedLabel ? (
+                <>
+                  <CheckCircle size={18} style={{ color: "#6e5dce" }} />
+                  <div>
+                    <div style={{ color: "#1e293b", fontWeight: "600" }}>
+                      {selectedLabel}
+                    </div>
+                    {selectedLabelData && (
+                      <div style={{ fontSize: "12px", color: "#64748b" }}>
+                        📄 {selectedLabelData.pageCount}개 페이지
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Tag size={18} style={{ color: "#9ca3af" }} />
+                  <span style={{ color: "#9ca3af" }}>라벨을 선택하세요</span>
+                </>
+              )}
+            </div>
+            <ChevronDown
+              size={18}
+              style={{
+                color: "#6b7280",
+                transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.3s ease",
+              }}
+            />
+          </button>
+
+          {/* 드롭다운 메뉴 */}
+          {isDropdownOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                backgroundColor: "white",
+                border: "2px solid #e2e8f0",
+                borderRadius: "12px",
+                marginTop: "8px",
+                boxShadow:
+                  "0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                zIndex: 1000,
+                overflow: "hidden",
+              }}
+            >
+              {availableLabels.length > 0 ? (
+                availableLabels.map((label) => (
+                  <button
+                    key={label.id}
+                    onClick={() => handleLabelSelect(label.name)}
+                    style={{
+                      width: "100%",
+                      padding: "16px",
+                      border: "none",
+                      backgroundColor:
+                        selectedLabel === label.name
+                          ? "#f0f9ff"
+                          : "transparent",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#374151",
+                      transition: "all 0.2s ease",
+                      textAlign: "left",
+                    }}
+                    onMouseOver={(e) => {
+                      if (selectedLabel !== label.name) {
+                        e.currentTarget.style.backgroundColor = "#f8fafc";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedLabel !== label.name) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: label.isActive ? "#10b981" : "#f59e0b",
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                        {label.name}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#64748b" }}>
+                        📄 {label.pageCount}개 페이지 • 업데이트:{" "}
+                        {label.lastUpdated}
+                      </div>
+                    </div>
+                    {selectedLabel === label.name && (
+                      <CheckCircle size={16} style={{ color: "#6e5dce" }} />
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#9ca3af",
+                    fontSize: "14px",
+                  }}
+                >
+                  사용 가능한 라벨이 없습니다
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {selectedLabel && (
-        <div style={{ marginBottom: "16px" }}>
+        <div>
           <div
             style={{
               display: "flex",
@@ -208,12 +390,12 @@ const RAGManager: React.FC<RAGManagerProps> = ({
               onClick={() => processRAGData(selectedLabel)}
               disabled={isProcessing}
               className={sprinkles({
-                backgroundColor: "primary",
                 color: "on_primary",
                 padding: 8,
                 borderRadius: "small",
               })}
               style={{
+                backgroundColor: "#6e5dce",
                 border: "none",
                 cursor: isProcessing ? "not-allowed" : "pointer",
                 fontSize: "12px",

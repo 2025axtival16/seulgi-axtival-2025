@@ -10,7 +10,7 @@ export const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${endpoint}`;
 
   const defaultOptions: RequestInit = {
     headers: {

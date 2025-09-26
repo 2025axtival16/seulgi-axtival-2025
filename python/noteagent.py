@@ -200,6 +200,7 @@ async def summarize_all(text, title):
     messages = [
         SystemMessage(content=f"""당신은 전문 회의록 요약가입니다. 아래는 회의록의 원문 로그입니다. 
 각 발언에는 시간과 발언자가 포함되어 있습니다. 
+제목에는 적절한 이모지를 사용하고, 가독성 있게 보일 수 있도록 작성하세요.
 
 [회의록 제목]
 

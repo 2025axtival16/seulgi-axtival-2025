@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CheckCircle,
   AlertCircle,
@@ -15,6 +15,7 @@ import {
 import { sprinkles } from "../../styles/sprinkles.css";
 import { API_BASE_URL } from "../../constants/KEY";
 import { formatMeetingNotes } from "@/utils/clipboard";
+import { formatDateTime } from "@/utils/dateTime";
 
 interface TranscriptItem {
   id: string;
@@ -32,49 +33,109 @@ interface Employee {
 interface MeetingEndModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onMeetingComplete: (summary: string, followUps: string[]) => void;
   meetingTitle: string;
   participants: Employee[];
   transcript: TranscriptItem[];
   logs: string[];
   audioBlob?: Blob;
   selectedLabel?: string;
+  recordingStartTime?: Date | null;
+  realTimeSummary?: string[];
 }
 
 interface ProcessingStatus {
   audioSaved: boolean;
   summaryGenerated: boolean;
-  confluenceSaved: boolean;
-  emailSent: boolean;
+  shareSaved: boolean;
 }
 
 const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
   isOpen,
   onClose,
+  onMeetingComplete,
   meetingTitle,
   participants,
   transcript,
   logs,
   audioBlob,
   selectedLabel,
+  recordingStartTime,
+  realTimeSummary = [],
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<ProcessingStatus>({
     audioSaved: false,
     summaryGenerated: false,
-    confluenceSaved: false,
-    emailSent: false,
+    shareSaved: false,
   });
   const [summary, setSummary] = useState("");
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [confluenceUrl, setConfluenceUrl] = useState("");
   const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState(2);
+  const [errorCountdown, setErrorCountdown] = useState(5);
+
+  // shareSaved가 true가 되면 2초 후 모달 자동 닫기
+  useEffect(() => {
+    if (status.shareSaved && isOpen) {
+      let timeLeft = 5;
+      setCountdown(timeLeft);
+
+      const countdownInterval = setInterval(() => {
+        timeLeft -= 1;
+        setCountdown(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          // 회의 완료 데이터 전달하고 모달 닫기
+          onMeetingComplete(summary, followUps);
+        }
+      }, 1000);
+
+      return () => clearInterval(countdownInterval);
+    }
+  }, [
+    status.shareSaved,
+    isOpen,
+    onClose,
+    onMeetingComplete,
+    summary,
+    followUps,
+  ]);
+
+  // 에러 발생 시 5초 후 모달 자동 닫기
+  useEffect(() => {
+    if (error && isOpen) {
+      let timeLeft = 5;
+      setErrorCountdown(timeLeft);
+
+      const errorCountdownInterval = setInterval(() => {
+        timeLeft -= 1;
+        setErrorCountdown(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(errorCountdownInterval);
+          onClose();
+        }
+      }, 1000);
+
+      return () => clearInterval(errorCountdownInterval);
+    }
+  }, [error, isOpen, onClose]);
 
   const processMeetingEnd = async () => {
     setIsProcessing(true);
     setError("");
 
     try {
-      // 음성 파일 저장
+      // 음성 파일 저장 (일단 바로 true로 설정)
+      setStatus((prev) => ({ ...prev, audioSaved: true }));
+
+      // 잠시 대기 후 요약 시작 (순차적 표시를 위함)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 실제 음성 파일 저장이 필요한 경우 아래 코드 사용
       // if (audioBlob) {
       //   const formData = new FormData();
       //   formData.append(
@@ -113,12 +174,32 @@ const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
         setSummary(summaryData.answer);
         setFollowUps(summaryData.followUps || []);
         setStatus((prev) => ({ ...prev, summaryGenerated: true }));
+
+        // 잠시 대기 후 Confluence 저장 시작 (순차적 표시를 위함)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } else {
         throw new Error("요약 생성 실패");
       }
 
+      // formatMeetingNotes와 summaryData.answer를 합쳐서 완전한 회의록 생성
+      const meetingTime = recordingStartTime
+        ? formatDateTime(recordingStartTime)
+        : formatDateTime(new Date());
+
+      const formattedNotes = formatMeetingNotes(
+        meetingTitle,
+        participants,
+        transcript,
+        meetingTime,
+        realTimeSummary // 실시간 요약 사용
+      );
+
+      // 완전한 회의록 = 포맷된 노트 + AI 요약
+      const completeContent =
+        formattedNotes + `\n\n### 🤖 전체 회의 요약:\n\n${summaryData.answer}`;
+
       // Confluence에 저장 및 이메일 전송
-      const shareResponse = await fetch(`${API_BASE_URL}/api/note/share`, {
+      const shareResponse = await fetch(`/api/note/share`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,12 +208,12 @@ const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
           label: selectedLabel || "",
           participants: participants.map((p) => p.email),
           title: meetingTitle,
-          content: summaryData.answer,
+          content: completeContent,
         }),
       });
 
       if (shareResponse.ok) {
-        setStatus((prev) => ({ ...prev, shareSent: true }));
+        setStatus((prev) => ({ ...prev, shareSaved: true }));
       } else {
         throw new Error("공유 실패");
       }
@@ -428,44 +509,66 @@ const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
           </div>
         )}
 
-        {(isProcessing || status.audioSaved) && (
+        {(isProcessing ||
+          status.audioSaved ||
+          status.summaryGenerated ||
+          status.shareSaved) && (
           <div>
-            <div style={{ marginBottom: "24px" }}>
+            <div>
+              {/* Step 1: 회의록 요약 생성 (항상 표시) */}
               <ProcessingStep
                 title="회의록 요약 생성"
                 completed={status.summaryGenerated}
                 inProgress={status.audioSaved && !status.summaryGenerated}
               />
-              <ProcessingStep
-                title="Confluence 저장"
-                completed={status.confluenceSaved}
-                inProgress={status.summaryGenerated && !status.confluenceSaved}
-              />
-              <ProcessingStep
-                title="이메일 전송"
-                completed={status.emailSent}
-                inProgress={status.confluenceSaved && !status.emailSent}
-              />
+
+              {/* Step 2: Confluence 저장 (요약 완료 후 표시) */}
+              {status.summaryGenerated && (
+                <ProcessingStep
+                  title="Confluence 저장 및 이메일 전송"
+                  completed={status.shareSaved}
+                  inProgress={status.summaryGenerated && !status.shareSaved}
+                />
+              )}
             </div>
 
-            {summary && (
-              <div style={{ marginBottom: "20px" }}>
+            {summary && status.summaryGenerated && (
+              <div
+                style={{
+                  marginBottom: "20px",
+                  animation: "slideIn 0.5s ease-out",
+                  transform: "translateY(0)",
+                  opacity: 1,
+                  marginTop: "12px",
+                }}
+              >
                 <h3
                   style={{
                     marginBottom: "12px",
                     fontSize: "16px",
                     fontWeight: "600",
+                    color: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
                   }}
                 >
-                  회의 요약
+                  📝 회의 요약
                 </h3>
                 <div
                   style={{
-                    padding: "12px",
-                    backgroundColor: "#f5f5f5",
-                    borderRadius: "6px",
+                    padding: "16px",
+                    backgroundColor: "#f8fafc",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: "12px",
                     fontSize: "14px",
-                    lineHeight: "1.5",
+                    lineHeight: "1.6",
+                    color: "#334155",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    maxHeight: "200px",
+                    overflowY: "auto",
                   }}
                 >
                   {summary}
@@ -473,7 +576,7 @@ const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
               </div>
             )}
 
-            {followUps.length > 0 && (
+            {followUps.length > 0 && status.summaryGenerated && (
               <div style={{ marginBottom: "20px" }}>
                 <h3
                   style={{
@@ -520,36 +623,107 @@ const MeetingEndModal: React.FC<MeetingEndModalProps> = ({
             {error && (
               <div
                 style={{
-                  padding: "12px",
-                  backgroundColor: "#ffebee",
-                  color: "#c62828",
-                  borderRadius: "6px",
+                  padding: "16px",
+                  backgroundColor: "#fef2f2",
+                  border: "2px solid #fca5a5",
+                  borderRadius: "12px",
                   marginBottom: "20px",
-                  fontSize: "14px",
+                  textAlign: "center",
                 }}
               >
-                {error}
+                <div style={{ fontSize: "32px", marginBottom: "8px" }}>⚠️</div>
+                <div
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    color: "#dc2626",
+                    marginBottom: "8px",
+                  }}
+                >
+                  오류가 발생했습니다
+                </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    color: "#991b1b",
+                    marginBottom: "12px",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  {error}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#dc2626",
+                    backgroundColor: "rgba(220, 38, 38, 0.1)",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    display: "inline-block",
+                  }}
+                >
+                  {errorCountdown}초 후 자동으로 닫힙니다
+                </div>
               </div>
             )}
 
-            {status.emailSent && (
-              <button
-                onClick={onClose}
-                className={sprinkles({
-                  backgroundColor: "primary",
-                  color: "on_primary",
-                  padding: 12,
-                  borderRadius: "medium",
-                })}
+            {/* 최종 완료 메시지 (모든 단계 완료 후 표시) */}
+            {status.shareSaved && (
+              <div
                 style={{
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  alignItems: "center",
                 }}
               >
-                완료
-              </button>
+                <div
+                  style={{
+                    padding: "16px",
+                    backgroundColor: "#f0f9ff",
+                    borderRadius: "12px",
+                    border: "2px solid #bae6fd",
+                    textAlign: "center",
+                    width: "100%",
+                  }}
+                >
+                  <CheckCircle
+                    size={32}
+                    style={{ color: "#10b981", marginBottom: "8px" }}
+                  />
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#065f46",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    🎉 모든 작업이 완료되었습니다!
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#0369a1" }}>
+                    {countdown}초 후 자동으로 닫힙니다
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onMeetingComplete(summary, followUps)}
+                  className={sprinkles({
+                    backgroundColor: "primary",
+                    color: "on_primary",
+                    padding: 12,
+                    borderRadius: "medium",
+                  })}
+                  style={{
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    width: "100%",
+                  }}
+                >
+                  지금 닫기
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -569,6 +743,7 @@ const ProcessingStep: React.FC<{
       alignItems: "center",
       gap: "12px",
       padding: "8px 0",
+      animation: "slideIn 0.5s ease-out",
     }}
   >
     {completed ? (
@@ -606,3 +781,29 @@ const ProcessingStep: React.FC<{
 );
 
 export default MeetingEndModal;
+
+// CSS 스타일 추가
+const styles = `
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+// 전역 스타일 주입
+if (typeof document !== "undefined") {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}

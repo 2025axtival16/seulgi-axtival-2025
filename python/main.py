@@ -11,7 +11,7 @@ import html2text
 import httpx
 from qnaagent import ask_agent
 from qnaagent import ask_agent, terminal_chat_with_agent
-# from recordingaudio import conversation_transcriber, start_audio_capture
+from recordingaudio import conversation_transcriber, start_audio_capture
 from azurespeech import canceled_handler, handle_transcribed, meeting_log
 from langchain_openai import ChatOpenAI
 import shared
@@ -40,7 +40,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # 개발 편의상 "*"도 가능하나, 배포에선 명시 권장
+    allow_origins=origins,       # 개발 편의상 "*"도 가능하나, 배포에선 명시 권장
     allow_credentials=True,
     allow_methods=["*"],         # OPTIONS 포함 모든 메서드 허용
     allow_headers=["*"],         # Content-Type: application/json 등 허용
@@ -149,7 +149,7 @@ def ask_endpoint(req: RagChatRequest):
     return QueryResponse(answer=answer)
 
 # API에서 루프 시작
-@app.post("/start", response_model=QueryResponse)
+@app.post("/api/start", response_model=QueryResponse)
 async def start_endpoint():
     if shared.main_task is not None and not shared.main_task.done():
         return QueryResponse(answer="이미 실행 중입니다.")
@@ -157,7 +157,7 @@ async def start_endpoint():
     shared.main_task = asyncio.create_task(main_loop())
     return QueryResponse(answer="실시간 회의 시작")
 
-@app.post("/stop", response_model=QueryResponse)
+@app.post("/api/stop", response_model=QueryResponse)
 async def stop_endpoint():
     if shared.main_task is None:
         return QueryResponse(answer="실행중인 작업이 없습니다.")
@@ -165,11 +165,11 @@ async def stop_endpoint():
     conversation_transcriber.stop_transcribing_async()
     return QueryResponse(answer="실시간 회의 종료 완료")
 
-@app.get("/note")
+@app.get("/api/note")
 async def get_endpoint():
     return whisperstt.final_meeting_log
 
-@app.post("/stt")
+@app.post("/api/stt")
 async def stt_endpoint(audiofile: UploadFile, azuretext: str = Form(...)):
     print(f"Uploaded file name: {audiofile.filename}")
     file_content = await audiofile.read() 
@@ -181,7 +181,7 @@ class UpdateRequest(BaseModel):
     text: str
     title: str
 
-@app.post("/summary")
+@app.post("/api/note/summary")
 async def summary_endpoint(req: UpdateRequest):
     print(req.text)
     summary = await summarize_meeting_log(req.text)

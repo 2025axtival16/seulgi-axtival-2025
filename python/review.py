@@ -8,7 +8,7 @@ import html2text
 markdown_converter = html2text.HTML2Text()
 
 def main():
-    label_title_list = ['기본기강화', 'AIWA주간회의']
+    label_title_list = ['기본기강화', 'UMEET주간회의']
 
     for label_title in label_title_list:
         # 라벨 달린 페이지 목록 호출

@@ -16,6 +16,8 @@ interface HeaderProps {
   isEditingTitle: boolean;
   recordingTime: number;
   recordingStartTime?: Date | null;
+  isMeetingCompleted?: boolean;
+  selectedTab?: "conversation" | "script";
   onTitleChange: (title: string) => void;
   onTitleEdit: () => void;
   onTitleSave: (
@@ -24,6 +26,7 @@ interface HeaderProps {
       | React.FocusEvent<HTMLInputElement>
   ) => void;
   onCopyNotes: () => void;
+  onTabChange?: (tab: "conversation" | "script") => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -31,10 +34,13 @@ const Header: React.FC<HeaderProps> = ({
   isEditingTitle,
   recordingTime,
   recordingStartTime,
+  isMeetingCompleted = false,
+  selectedTab = "conversation",
   onTitleChange,
   onTitleEdit,
   onTitleSave,
   onCopyNotes,
+  onTabChange,
 }) => {
   // 실시간 현재 시간 (recordingStartTime이 null일 때만 사용)
   const currentDateTime = useCurrentDateTime(60000); // 1분마다 업데이트
@@ -103,8 +109,17 @@ const Header: React.FC<HeaderProps> = ({
         }}
       >
         <div style={{ display: "flex" }}>
-          <Button variant="primary">대화 기록</Button>
-          <Button variant="danger" style={{ marginLeft: "8px" }}>
+          <Button
+            variant={selectedTab !== "script" ? "primary" : "danger"}
+            onClick={() => onTabChange?.("conversation")}
+          >
+            대화 기록
+          </Button>
+          <Button
+            variant={selectedTab !== "conversation" ? "primary" : "danger"}
+            style={{ marginLeft: "8px" }}
+            onClick={() => onTabChange?.("script")}
+          >
             스크립트
           </Button>
         </div>

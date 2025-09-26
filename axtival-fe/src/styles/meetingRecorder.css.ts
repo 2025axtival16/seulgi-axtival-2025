@@ -77,7 +77,7 @@ export const sectionContainer = style([
     paddingLeft: "24px",
     paddingRight: "24px",
     paddingTop: "0px",
-    paddingBottom: "0px",
+    paddingBottom: "12px",
     marginBottom: "0px",
   },
 ]);
@@ -109,7 +109,10 @@ export const contentCard = style([
     padding: 24,
   }),
   {
-    height: "100%",
+    maxHeight: "calc(100vh - 200px)", // 뷰포트에서 헤더/여백 제외
+    overflow: "hidden", // 내부 스크롤 컨테이너에서 스크롤 처리
+    display: "flex",
+    flexDirection: "column",
   },
 ]);
 
@@ -291,5 +294,137 @@ export const rightPanelExpanded = style([
     flexDirection: "column",
     height: "100vh",
     transition: "width 0.3s ease",
+  },
+]);
+
+// Left Panel Styles
+export const leftPanel = style([
+  sprinkles({
+    padding: 16,
+  }),
+  {
+    width: "400px",
+    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+    borderRight: "1px solid #e2e8f0",
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    overflowY: "auto",
+    position: "relative",
+    boxShadow: "inset -1px 0 0 0 rgba(0,0,0,0.05)",
+  },
+]);
+
+export const leftPanelTitle = style({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "20px",
+  borderBottom: "2px solid #e2e8f0",
+  paddingBottom: "16px",
+  margin: "-16px -16px 20px -16px",
+  padding: "16px 16px 16px 16px",
+  backdropFilter: "blur(10px)",
+  position: "sticky",
+  top: "0",
+  zIndex: 10,
+});
+
+export const leftPanelContent = style({
+  flex: 1,
+  overflowY: "auto",
+  padding: "0 4px",
+});
+
+export const commentCard = style([
+  sprinkles({
+    backgroundColor: "neutral",
+    borderColor: "neutral_2",
+    padding: 12,
+    borderRadius: "medium",
+    borderWidth: "small",
+  }),
+  {
+    marginBottom: "12px",
+    borderStyle: "solid",
+    cursor: "default",
+  },
+]);
+
+export const commentCardTitle = style([
+  sprinkles({
+    color: "primary",
+  }),
+  {
+    fontSize: "16px",
+    fontWeight: "600",
+    marginBottom: "8px",
+    lineHeight: "1.4",
+  },
+]);
+
+export const commentCardUrl = style({
+  background: "none",
+  border: "1px solid #3b82f6",
+  borderRadius: "4px",
+  padding: "4px 8px",
+  color: "#3b82f6",
+  fontSize: "12px",
+  cursor: "pointer",
+  marginBottom: "12px",
+  transition: "all 0.2s",
+  ":hover": {
+    backgroundColor: "#3b82f6",
+    color: "white",
+  },
+});
+
+export const commentList = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+});
+
+export const commentItem = style([
+  sprinkles({
+    backgroundColor: "neutral_1",
+    padding: 8,
+    borderRadius: "small",
+  }),
+  {
+    fontSize: "14px",
+    lineHeight: "1.5",
+    color: "#374151",
+    whiteSpace: "pre-wrap",
+  },
+]);
+
+export const loadingState = style({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: "48px 32px",
+  color: "#6b7280",
+  fontSize: "14px",
+  minHeight: "200px",
+});
+
+export const errorState = style([
+  sprinkles({
+    padding: 24,
+    borderRadius: "medium",
+  }),
+  {
+    backgroundColor: "#e5e7fa",
+    border: "2px solid #5e4db5",
+    borderStyle: "solid",
+    color: "#5e4db5",
+    fontSize: "14px",
+    textAlign: "center",
+    margin: "20px 8px",
+    minHeight: "180px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 ]);

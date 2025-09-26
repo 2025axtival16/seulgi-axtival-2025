@@ -26,6 +26,7 @@ interface TranscriptionAreaProps {
   isRecording: boolean;
   isPaused: boolean;
   participants: Employee[];
+  logs: string[]; // props로 logs 받기
   onTranscriptUpdate: (transcript: TranscriptItem[]) => void;
   onRecordingStart: (startTime: Date) => void;
   onRealTimeSummaryUpdate: (summary: string) => void;
@@ -37,13 +38,13 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
   isRecording,
   isPaused,
   participants,
+  logs,
   onTranscriptUpdate,
   onRecordingStart,
   onRealTimeSummaryUpdate,
   onLogsUpdate,
 }) => {
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [currentSpeaker, setCurrentSpeaker] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -53,9 +54,23 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
   const speechConfigRef = useRef<SpeechSDK.SpeechConfig>();
   const speakers = useRef<Record<string, string>>({});
   const transcriptEndRef = useRef<HTMLDivElement>(null);
-  const logsRef = useRef<string[]>([]);
+  const logsRef = useRef<string[]>(logs); // props로 받은 logs로 초기화
   const isPausedRef = useRef<boolean>(isPaused);
   const logCountRef = useRef<number>(0);
+
+  // props logs와 logsRef 동기화
+  useEffect(() => {
+    logsRef.current = logs;
+    logCountRef.current =
+      logs.filter(
+        (log) =>
+          !log.includes("🎤") &&
+          !log.includes("🛑") &&
+          !log.includes("⏸️") &&
+          !log.includes("▶️") &&
+          !log.includes("❌")
+      ).length % 5; // 시스템 메시지가 아닌 로그의 카운트 유지
+  }, [logs]);
 
   // 참가자 라벨 매핑
   const { participantsList, labelMap } = useMemo(() => {
@@ -110,7 +125,7 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
 
       if (conversationLogs.length === 0) return;
 
-      const response = await fetch(`${API_BASE_URL}/summary`, {
+      const response = await fetch(`/api/note/summary`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -143,7 +158,6 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
   const appendLog = (line: string) => {
     const next = [...logsRef.current, line];
     logsRef.current = next;
-    setLogs(next);
     onLogsUpdate(next); // 상위 컴포넌트에 로그 업데이트 전달
     console.log("next", next);
 
@@ -194,7 +208,7 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
 
   // ConversationTranscriber 생성
   const createTranscriber = (): SpeechSDK.ConversationTranscriber | null => {
-    onLogsUpdate([]);
+    // onLogsUpdate([]);
     const speechConfig = speechConfigRef.current;
     if (!speechConfig) {
       console.error("Speech config not initialized");
@@ -285,17 +299,8 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
 
         transcriberRef.current = transcriber;
 
-        // 🔄 RESTART 시에만 상태 초기화 (Stop은 로그 유지)
-        const hasExistingLogs = logsRef.current.length > 0;
-        if (hasExistingLogs) {
-          console.log("🔄 재시작: 이전 로그 정리 중...");
-          appendLog("🔄 새로운 녹음 세션 시작 - 이전 로그 정리");
-        }
-
-        logsRef.current = [];
-        setLogs([]);
-        setTranscript([]);
-        logCountRef.current = 0; // 로그 카운터 리셋
+        // 🔄 기존 로그와 전사 내용 유지 - 회의 중단/재개 시에도 데이터 보존
+        console.log("🔄 재시작: 기존 로그 유지하며 계속...");
 
         await transcriber.startTranscribingAsync();
         setIsListening(true);
@@ -427,8 +432,19 @@ const TranscriptionArea: React.FC<TranscriptionAreaProps> = ({
         </div>
       )}
 
-      {/* 전사 내용 */}
-      <div style={{ minHeight: "200px" }}>
+      {/* 전사 내용 - 스크롤 영역 */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: "200px",
+          overflowY: "auto",
+          overflowX: "hidden",
+          border: "1px solid #e0e0e0",
+          borderRadius: "8px",
+          padding: "8px",
+          backgroundColor: "#ffffff",
+        }}
+      >
         {logs.length === 0 ? (
           <div
             className={sprinkles({

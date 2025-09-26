@@ -95,6 +95,13 @@ sys_msg = SystemMessage(content="""
 7. 전체 요약, 전체 회의 분석 등등 전체 회의 문서에 대한 요청이 들어오면 get_all_meeting_notes을 사용해서 전체 문서를 가져옵니다.
 
 사용자는 질문을 입력할 것이며, 당신은 적절한 Tool(Action)을 선택해 처리하고 최종 답변을 제공합니다.
+최종 답변은 아래와 같은 형식으로 출력하세요.
+
+최종 답변:
+
+#### 제목
+💬 내용1
+💬 내용2
 """)
 
 llm = ChatOpenAI(model="gpt-4o-mini")

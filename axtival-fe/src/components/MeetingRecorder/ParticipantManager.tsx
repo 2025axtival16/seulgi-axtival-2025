@@ -57,7 +57,7 @@ const ParticipantManager: React.FC<ParticipantManagerProps> = ({
     setIsSearching(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/userinfo/${encodeURIComponent(query.trim())}`,
+        `/api/userinfo/${encodeURIComponent(query.trim())}`,
         {
           method: "GET",
           headers: {
