@@ -185,7 +185,7 @@ class UpdateRequest(BaseModel):
 async def summary_endpoint(req: UpdateRequest):
     print(req.text)
     summary = await summarize_meeting_log(req.text)
-    await update_docs(req.text, req.title)
+    await update_docs(summary, req.title)
     return QueryResponse(answer=summary)
 
 
@@ -201,6 +201,7 @@ async def save_confluence_and_send_mail(req: SaveConfluence):
     content = req.content
     page_id = confluence.post_content(page["id"],req.title,content)
     print(page_id)
+    confluence.post_label(page_id, req.label)
     data = confluence.get_content(page_id)
     links = data["_links"]
     base_url = links["base"]

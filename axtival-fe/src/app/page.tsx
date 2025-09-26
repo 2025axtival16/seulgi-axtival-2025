@@ -34,6 +34,9 @@ import { useCurrentDateTime } from "../utils/dateTime";
 import Toast from "../components/Toast/Toast";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Employee, TranscriptItem } from "../constants/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
 const MeetingRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -359,7 +362,173 @@ const MeetingRecorder = () => {
                         overflowWrap: "break-word",
                       }}
                     >
-                      {meetingSummary}
+                      <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            h1: ({ children }) => (
+                              <h1
+                                style={{
+                                  fontSize: "1.2em",
+                                  fontWeight: "bold",
+                                  margin: "6px 0 4px 0",
+                                  color: "inherit",
+                                }}
+                              >
+                                {children}
+                              </h1>
+                            ),
+                            h2: ({ children }) => (
+                              <h2
+                                style={{
+                                  fontSize: "1.1em",
+                                  fontWeight: "bold",
+                                  margin: "4px 0 2px 0",
+                                  color: "inherit",
+                                }}
+                              >
+                                {children}
+                              </h2>
+                            ),
+                            h3: ({ children }) => (
+                              <h3
+                                style={{
+                                  fontSize: "1.05em",
+                                  fontWeight: "bold",
+                                  margin: "2px 0 1px 0",
+                                  color: "inherit",
+                                }}
+                              >
+                                {children}
+                              </h3>
+                            ),
+                            p: ({ children }) => (
+                              <p
+                                style={{
+                                  margin: "1px 0",
+                                  lineHeight: "1.4",
+                                }}
+                              >
+                                💬 {children}
+                              </p>
+                            ),
+                            code: ({
+                              children,
+                              ...props
+                            }: { children: React.ReactNode } & any) =>
+                              props.inline ? (
+                                <code
+                                  style={{
+                                    backgroundColor: "#f1f5f9",
+                                    padding: "1px 3px",
+                                    borderRadius: "3px",
+                                    fontSize: "0.85em",
+                                    fontFamily: "monospace",
+                                  }}
+                                  {...props}
+                                >
+                                  {children}
+                                </code>
+                              ) : (
+                                <code
+                                  style={{
+                                    display: "block",
+                                    backgroundColor: "#f8fafc",
+                                    padding: "8px",
+                                    borderRadius: "4px",
+                                    fontSize: "0.85em",
+                                    fontFamily: "monospace",
+                                    overflow: "auto",
+                                    border: "1px solid #e2e8f0",
+                                    margin: "4px 0",
+                                  }}
+                                  {...props}
+                                >
+                                  {children}
+                                </code>
+                              ),
+                            blockquote: ({ children }) => (
+                              <blockquote
+                                style={{
+                                  borderLeft: "3px solid #6366f1",
+                                  paddingLeft: "12px",
+                                  margin: "4px 0",
+                                  fontStyle: "italic",
+                                  color: "#64748b",
+                                }}
+                              >
+                                {children}
+                              </blockquote>
+                            ),
+                            ul: ({ children }) => (
+                              <ul
+                                style={{
+                                  paddingLeft: "16px",
+                                  margin: "2px 0",
+                                }}
+                              >
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol
+                                style={{
+                                  paddingLeft: "16px",
+                                  margin: "2px 0",
+                                }}
+                              >
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li
+                                style={{
+                                  margin: "1px 0",
+                                  lineHeight: "1.3",
+                                }}
+                              >
+                                {children}
+                              </li>
+                            ),
+                            table: ({ children }) => (
+                              <table
+                                style={{
+                                  borderCollapse: "collapse",
+                                  width: "100%",
+                                  margin: "4px 0",
+                                  border: "1px solid #e2e8f0",
+                                  fontSize: "0.9em",
+                                }}
+                              >
+                                {children}
+                              </table>
+                            ),
+                            th: ({ children }) => (
+                              <th
+                                style={{
+                                  border: "1px solid #e2e8f0",
+                                  padding: "6px 8px",
+                                  backgroundColor: "#f8fafc",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {children}
+                              </th>
+                            ),
+                            td: ({ children }) => (
+                              <td
+                                style={{
+                                  border: "1px solid #e2e8f0",
+                                  padding: "6px 8px",
+                                }}
+                              >
+                                {children}
+                              </td>
+                            ),
+                          }}
+                        >
+                        {meetingSummary}
+                        </ReactMarkdown>
                     </div>
                   </div>
                 )}
